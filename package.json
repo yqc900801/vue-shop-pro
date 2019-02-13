@@ -11,6 +11,10 @@
     "pack": "node build/build.js"
   },
   "dependencies": {
+    "babel-plugin-component": "^1.1.1",
+    "element-ui": "^2.5.4",
+    "less": "^3.9.0",
+    "less-loader": "^4.1.0",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"
   },
