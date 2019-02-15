@@ -3,29 +3,23 @@ import Router from 'vue-router'
 // import HelloWorld from '@/components/HelloWorld'
 import Login from '@/components/Login'
 import Home from '@/components/Home'
+import Welcome from '@/components/Welcome'
 Vue.use(Router)
 
 const router = new Router({
   routes: [
-    {
-      path: '/',
-      redirect: '/login'
-    },
-    {
-      path: '/login',
-      component: Login
-    },
+    { path: '/', redirect: '/login' },
+    { path: '/login', component: Login },
     {
       path: '/home',
-      component: Home
+      component: Home,
+      redirect: '/welcome',
+      children: [{ path: '/welcome', component: Welcome }]
     }
   ]
 })
 // 导航守卫，检测是否登录，没有登录就调到登录页
 router.beforeEach((to, from, next) => {
-  // console.log(to)
-  // console.log(from)
-  // console.log(next)
   // 访问login
   if (to.path === '/login') {
     return next()
@@ -34,6 +28,7 @@ router.beforeEach((to, from, next) => {
   if (to.path !== '/login') {
     var token = sessionStorage.getItem('token')
     if (!token) {
+      alert('请先登录')
       return next('/login')
     }
     return next()
