@@ -21,6 +21,7 @@
           :unique-opened="true"
           :collapse="menushow"
           :style="menushow?'width:65px':'width:200px'"
+          :router='true'
         >
           <el-submenu :index="item.id+''" v-for="(item,i) in menuList" :key="item.id">
             <template slot="title">
@@ -29,7 +30,7 @@
             </template>
 
             <el-menu-item
-              :index="item.id+'-'+item2.id"
+              :index="item.path"
               v-for="item2  in item.children"
               :key="item2.id"
             >
