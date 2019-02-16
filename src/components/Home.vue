@@ -30,7 +30,7 @@
             </template>
 
             <el-menu-item
-              :index="item.path"
+              :index="item2.path"
               v-for="item2  in item.children"
               :key="item2.id"
             >
@@ -78,8 +78,8 @@ export default {
     // 获取左侧导航栏数据
     async getMenuList() {
       const { data: res } = await this.$http.get('menus')
-      console.log(res.data)
-      console.log(res.meta)
+      // console.log(res.data)
+      // console.log(res.meta)
       if (res.meta.status !== 200) {
         return this.$message.error(res.meta.msg)
       }
