@@ -16,8 +16,6 @@ i.iconfont {
 /* 卡片区域样式 */
 .el-card {
   box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.15);
-}
-.box-card {
   margin-top: 15px;
 }
 /* 卡片内的表格样式 */

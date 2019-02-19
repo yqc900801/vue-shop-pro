@@ -244,6 +244,11 @@ export default {
             return this.$message.error(res.meta.msg)
           }
           this.$message.success(res.meta.msg)
+          // 在重新加载数据前，判断当前页码是否只有一条数据
+          if (this.tableData.length == 1 && this.queryParams.pagenum > 1) {
+            // 使得页码减1
+            this.queryParams.pagenum--
+          }
           this.getUsersInfo()
         })
         .catch(() => {})
@@ -262,9 +267,12 @@ export default {
       this.$refs.editFormRef.resetFields()
     },
     async editUser() {
-      const {data:res} = await this.$http.put('users/' + this.editForm.id, this.editForm)
+      const { data: res } = await this.$http.put(
+        'users/' + this.editForm.id,
+        this.editForm
+      )
       // console.log(res)
-      if(res.meta.status !== 200){
+      if (res.meta.status !== 200) {
         return this.$message.error(res.meta.msg)
       }
       this.editDialogVisible = false
@@ -276,5 +284,4 @@ export default {
 </script>
 
 <style lang="less" scoped>
-
 </style>
