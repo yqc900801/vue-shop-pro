@@ -40,7 +40,6 @@ export default {
       if (res.meta.status !== 200) {
         return this.$message.error(res.meta.msg)
       }
-      console.log(res.data)
       this.rightsInfos = res.data
     }
   }
