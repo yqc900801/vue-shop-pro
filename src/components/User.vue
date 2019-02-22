@@ -40,6 +40,7 @@
         </el-table-column>
         <el-table-column label="操作" width="200">
           <template slot-scope="info">
+            
             <el-button
               type="primary"
               icon="el-icon-edit"
@@ -53,7 +54,12 @@
               @click="delUser(info.row.id)"
             ></el-button>
             <el-tooltip content="分配角色" placement="top" :enterable="false">
-              <el-button type="warning" icon="el-icon-setting" size="mini"></el-button>
+              <el-button
+                type="warning"
+                icon="el-icon-setting"
+                size="mini"
+                @click="showFenpeiDialog(info.row.id,info.row.role_name)"
+              ></el-button>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -111,6 +117,34 @@
         <div slot="footer" class="dialog-footer">
           <el-button @click="editDialogVisible = false">取 消</el-button>
           <el-button type="primary" @click="editUser">确 定</el-button>
+        </div>
+      </el-dialog>
+      <!-- 用户分配角色弹框 -->
+      <el-dialog title="用户分配角色" :visible.sync="fenpeiDialog" width="50%" @close="fenpeiDialogClose">
+        <el-form
+          :model="fenpeiForm"
+          ref="fenpeiFormRef"
+          :rules="fenpeiFormRules"
+          label-width="130px"
+        >
+          <el-form-item label="当前的用户">{{fenpeiForm.username}}</el-form-item>
+
+          <el-form-item label="当前的角色">{{fenpeiForm.rname}}</el-form-item>
+
+          <el-form-item label="分配新角色">
+            <el-select v-model="fenpeiForm.value" placeholder="请选择">
+              <el-option
+                v-for="item in roleInfos"
+                :key="item.id"
+                :label="item.roleName"
+                :value="item.id"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="fenpeiDialog = false">取 消</el-button>
+          <el-button type="primary" @click="fenpeiRoleYes">确 定</el-button>
         </div>
       </el-dialog>
     </el-card>
@@ -172,6 +206,14 @@ export default {
           { required: true, message: '手机号码不正确', trigger: 'blur' },
           { validator: checkMobile, trigger: 'blur' }
         ]
+      },
+      // 给用户分配角色
+      fenpeiDialog: false,
+      // 角色列表
+      roleInfos: [],
+      fenpeiForm: { username: '', rid: '', rname: '',value:'' },
+      fenpeiFormRules: {
+        rid: [{ required: true, message: '角色必须选择', trigger: 'change' }]
       }
     }
   },
@@ -188,6 +230,12 @@ export default {
       }
       // 把获得到的数据赋值给表格数据
       this.tableData = res.data.users
+
+      // this.tableData.forEach((item)=>{
+      //   console.log(item)
+
+      // });
+
       // 总条数
       this.total = res.data.total
     },
@@ -254,7 +302,7 @@ export default {
         .catch(() => {})
     },
     // 编辑用户
-    async showEditDialog(id) {
+    async showEditDialog(id,role_name) {
       this.editDialogVisible = true
       const { data: res } = await this.$http.get('users/' + id)
       if (res.meta.status !== 200) {
@@ -276,6 +324,40 @@ export default {
         return this.$message.error(res.meta.msg)
       }
       this.editDialogVisible = false
+      this.$message.success(res.meta.msg)
+      this.getUsersInfo()
+    },
+    // 展示分配角色对话框
+    async showFenpeiDialog(id,role_name) {
+      this.fenpeiDialog = true
+      const { data: res } = await this.$http.get('users/' + id)
+      if (res.meta.status !== 200) {
+        return this.$message.error(res.meta.msg)
+      }
+
+      this.fenpeiForm = res.data
+      this.fenpeiForm.rname = role_name
+      const { data: res2 } = await this.$http.get('roles')
+      if (res2.meta.status !== 200) {
+        return this.$message.error(res.meat.msg)
+      }
+      this.roleInfos = res2.data
+    },
+    // 给用户分配角色
+    fenpeiDialogClose() {
+      this.$refs.fenpeiFormRef.resetFields()
+    },
+    // 确定分配角色
+    async fenpeiRoleYes() {
+      const { data: res } = await this.$http.put(
+        'users/' + this.fenpeiForm.id + '/role',
+        // this.fenpeiForm
+        {rid:this.fenpeiForm.value}
+      )
+      if (res.meta.status !== 200) {
+        return this.$message.error(res.meta.msg)
+      }
+      this.fenpeiDialog = false
       this.$message.success(res.meta.msg)
       this.getUsersInfo()
     }

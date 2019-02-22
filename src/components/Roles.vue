@@ -10,6 +10,48 @@
     <el-card>
       <el-button type="primary" @click="addRoleDialog = true">添加角色</el-button>
       <el-table :data="roleInfos" border style="width: 100%">
+        <!-- 数据表格展示区域 -->
+        <el-table-column type="expand">
+          <template slot-scope="info">
+            <!-- 遍历1级权限 -->
+            <el-row
+              v-for="(item,k) in info.row.children"
+              :key="item.id"
+              :style="{'border-bottom':'1px solid #EBEEF5','border-top':k===0?'1px solid #EBEEF5':''}"
+            >
+              <el-col :span="5">
+                <el-tag closable @close="closeTag(info.row.id,item.id)">{{item.authName}}</el-tag>
+                <i class="el-icon-caret-right"></i>
+              </el-col>
+              <el-col :span="19">
+                <!-- 遍历2级权限 -->
+                <el-row
+                  v-for="(item2,kk) in item.children"
+                  :key="item2.id"
+                  :style="{'border-top':kk!==0?'1px solid #EBEEF5':''}"
+                >
+                  <el-col :span="6">
+                    <el-tag
+                      type="success"
+                      closable
+                      @close="closeTag(info.row,id,item2.id)"
+                    >{{item2.authName}}</el-tag>
+                    <i class="el-icon-caret-right"></i>
+                  </el-col>
+                  <el-col :span="18">
+                    <el-tag
+                      type="warning"
+                      v-for="item3 in item2.children"
+                      :key="item3.id"
+                      closable
+                      @close="closeTag(info.row.id,item3.id)"
+                    >{{item3.authName}}</el-tag>
+                  </el-col>
+                </el-row>
+              </el-col>
+            </el-row>
+          </template>
+        </el-table-column>
         <el-table-column type="index" label="序号"></el-table-column>
         <el-table-column prop="roleName" label="角色名称"></el-table-column>
         <el-table-column prop="roleDesc" label="角色描述"></el-table-column>
@@ -27,7 +69,12 @@
               icon="el-icon-delete"
               @click="delRole(info.row.id)"
             >删除</el-button>
-            <el-button type="warning" size="mini" icon="el-icon-setting">分配权限</el-button>
+            <el-button
+              type="warning"
+              size="mini"
+              icon="el-icon-setting"
+              @click="showDistributeDialog(info.row)"
+            >分配权限</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -62,6 +109,27 @@
           <el-button type="primary" @click="editRoleYes">确 定</el-button>
         </div>
       </el-dialog>
+      <!--分配权限的Dialog对话框-->
+      <el-dialog title="分配权限" :visible.sync="distributeDialogVisible" width="50%">
+        <el-form ref="distributeFormRef" :model="distributeForm" label-width="120px">
+          <el-form-item label="角色名称">{{distributeForm.roleName}}</el-form-item>
+          <el-form-item label="供分配权限:">
+            <el-tree
+              :data="rightsInfo"
+              show-checkbox
+              default-expand-all
+              node-key="id"
+              :props="rightsInfoProps"
+              :default-checked-keys="defaultCheckedKeys"
+              ref="rightsTree"
+            ></el-tree>
+          </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="distributeDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="distributeRights">确定</el-button>
+        </span>
+      </el-dialog>
     </el-card>
   </div>
 </template>
@@ -95,7 +163,16 @@ export default {
         roleName: [
           { required: true, message: '请输入角色名称', trigger: 'blur' }
         ]
-      }
+      },
+      // 给角色分配权限
+      distributeDialogVisible: false,
+      distributeForm: {
+        id: 0,
+        roleName: ''
+      },
+      rightsInfo: [],
+      rightsInfoProps: { label: 'authName', children: 'children' },
+      defaultCheckedKeys: []
     }
   },
   methods: {
@@ -166,10 +243,80 @@ export default {
     },
     editRoleClose() {
       this.$refs.editRole.resetFields()
+    },
+    // 给角色移除权限
+    closeTag(roleId, rightsId) {
+      this.$confirm('确定要删除该权限吗？', '权限删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+        .then(async () => {
+          const { data: res } = await this.$http.delete(
+            'roles/' + roleId + '/rights/' + rightsId
+          )
+          if (res.meta.status !== 200) {
+            return this.$message.error(res.meta.msg)
+          }
+          this.$message.success(res.meta.msg)
+          this.getRoleInfos()
+        })
+        .catch(() => {})
+    },
+    // 给角色分配权限
+    async showDistributeDialog(role) {
+      this.distributeDialogVisible = true
+      this.distributeForm = role
+      // 把用户的权限数据取到
+      const { data: res } = await this.$http.get('rights/tree')
+      if (res.meta.status !== 200) {
+        return this.$message.error(res.meta.msg)
+      }
+      this.rightsInfo = res.data
+      // 把当前角色所拥有的3级权限获取出来(递归)
+      var idArr = []
+      this.getHaveRights(role, idArr)
+      this.defaultCheckedKeys = idArr
+    },
+    getHaveRights(node, keys) {
+      if (!node.children) {
+        return keys.push(node.id)
+      }
+      node.children.forEach(item => {
+        return this.getHaveRights(item, keys)
+      })
+    },
+    // 给角色分配权限
+    async distributeRights() {
+      // 获取全选的节点的ID信息
+      var ids1 = this.$refs.rightsTree.getCheckedKeys()
+      // 获取半选节点的ID信息
+      var ids2 = this.$refs.rightsTree.getHalfCheckedKeys()
+      var allIds = [...ids1, ...ids2].join(',')
+      if (!allIds) {
+        return this.$message.error('请选择权限')
+      }
+      const { data: res } = await this.$http.post(
+        'roles/' + this.distributeForm.id + '/rights',
+        { rids: allIds }
+      )
+      if(res.meta.status !== 200){
+        return this.$message.error(res.meta.msg)
+      }
+      this.distributeDialogVisible = false
+      this.$message.success(res.meta.msg)
+      this.getRoleInfos()
     }
   }
 }
 </script>
 
 <style lang="less" scoped>
+.el-tag {
+  margin: 10px 5px;
+}
+.el-row {
+  display: flex;
+  align-items: center;
+}
 </style>
